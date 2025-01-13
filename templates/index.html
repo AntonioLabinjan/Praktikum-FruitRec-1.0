@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Recognition</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(120deg, #f6d365, #fda085);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #222;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        form {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        input[type="file"] {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button {
+            background: #ff7f50;
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background: #ff6347;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            color: #222;
+            margin-top: 1rem;
+        }
+
+        #predictions p {
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem;
+            margin: 0.5rem auto;
+            border-radius: 5px;
+            max-width: 80%;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        img {
+            margin-top: 1rem;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #history {
+            margin-top: 2rem;
+            width: 80%;
+            max-width: 800px;
+        }
+
+        #history div {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 1rem;
+        }
+
+        #history img {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            img {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>FruitRec 1.0</h1>
+    <form id="upload-form">
+        <input type="file" id="file-input" accept="image/*" />
+        <button type="submit">Upload</button>
+    </form>
+
+    <h2>Predictions:</h2>
+    <div id="predictions"></div>
+
+    <h2>Annotated Image:</h2>
+    <img id="annotated-image" src="" alt="Annotated Image" width="500" style="display: none;" />
+
+    <h2>History:</h2>
+    <div id="history"></div>
+
+    <script>
+        // Hardcoded nutritional information for fruits
+        const nutritionData = {
+            "apple": { calories: 95, carbs: 25, protein: 0.5, fat: 0.3 },
+            "banana": { calories: 105, carbs: 27, protein: 1.3, fat: 0.3 },
+            "orange": { calories: 62, carbs: 15.4, protein: 1.2, fat: 0.2 },
+            "strawberry": { calories: 32, carbs: 7.7, protein: 0.7, fat: 0.3 },
+            // Add more fruits as needed
+        };
+
+        // Function to get hardcoded nutrition info
+        function getNutritionInfo(fruitName) {
+            const fruit = nutritionData[fruitName.toLowerCase()];
+            if (fruit) {
+                return {
+                    name: fruitName,
+                    calories: fruit.calories + ' kcal',
+                    carbs: fruit.carbs + ' g',
+                    protein: fruit.protein + ' g',
+                    fat: fruit.fat + ' g',
+                };
+            }
+            return null;
+        }
+
+        // Function to update the history display
+        function updateHistory() {
+            const historyDiv = document.getElementById('history');
+            historyDiv.innerHTML = ''; // Clear previous history
+
+            // Get history from localStorage
+            const history = JSON.parse(localStorage.getItem('history')) || [];
+
+            if (history.length === 0) {
+                historyDiv.textContent = 'No history available.';
+            } else {
+                history.forEach((entry, index) => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.style.marginBottom = '1rem';
+                    
+                    const className = entry.className;
+                    const confidence = entry.confidence.toFixed(2);
+
+                    // Display class name, confidence, and nutritional info
+                    entryDiv.innerHTML = `
+                        <strong>Prediction ${index + 1}:</strong><br>
+                        Class: ${className}, Confidence: ${confidence}<br>
+                        Nutritional Information:<br>
+                        Name: ${entry.nutrition.name}<br>
+                        Calories: ${entry.nutrition.calories}<br>
+                        Carbs: ${entry.nutrition.carbs}<br>
+                        Protein: ${entry.nutrition.protein}<br>
+                        Fat: ${entry.nutrition.fat}<br><br>
+                        <img src="${entry.image}" alt="Annotated Image" style="width: 200px; border-radius: 10px;">
+                    `;
+                    historyDiv.appendChild(entryDiv);
+                });
+            }
+        }
+
+        // Update history when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHistory();
+        });
+
+        // Modify your existing submit event listener to save predictions to history
+        document.getElementById('upload-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('file-input');
+            if (!fileInput.files[0]) {
+                alert('Please select an image file before uploading.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Display predictions
+                const predictionsDiv = document.getElementById('predictions');
+                predictionsDiv.innerHTML = ''; // Clear previous predictions
+
+                if (data.predictions.length > 0) {
+                    for (const prediction of data.predictions) {
+                        const className = prediction.class_name;
+                        const confidence = prediction.confidence.toFixed(2);
+
+                        const predictionText = document.createElement('p');
+                        predictionText.textContent = `Class: ${className}, Confidence: ${confidence}`;
+                        predictionsDiv.appendChild(predictionText);
+
+                        // Fetch and display nutritional information using the hardcoded data
+                        const nutrition = getNutritionInfo(className);
+                        if (nutrition) {
+                            const nutritionText = document.createElement('p');
+                            nutritionText.innerHTML = `
+                                <strong>Nutritional Information:</strong><br>
+                                Name: ${nutrition.name}<br>
+                                Calories: ${nutrition.calories}<br>
+                                Carbs: ${nutrition.carbs}<br>
+                                Protein: ${nutrition.protein}<br>
+                                Fat: ${nutrition.fat}
+                            `;
+                            predictionsDiv.appendChild(nutritionText);
+                        } else {
+                            const nutritionText = document.createElement('p');
+                            nutritionText.textContent = `No nutritional info available for ${className}.`;
+                            predictionsDiv.appendChild(nutritionText);
+                        }
+                    }
+
+                    // Display annotated image
+                    const annotatedImage = document.getElementById('annotated-image');
+                    annotatedImage.src = `data:image/png;base64,${data.image}`;
+                    annotatedImage.style.display = 'block';
+
+                    // Save the prediction to history
+                    const history = JSON.parse(localStorage.getItem('history')) || [];
+                    history.unshift({
+                        className: data.predictions[0].class_name,
+                        confidence: data.predictions[0].confidence,
+                        nutrition: getNutritionInfo(data.predictions[0].class_name),
+                        image: `data:image/png;base64,${data.image}`
+                    });
+
+                    // Limit history to 5 items
+                    if (history.length > 5) {
+                        history.pop();
+                    }
+                    localStorage.setItem('history', JSON.stringify(history));
+
+                    // Update the history section
+                    updateHistory();
+                } else {
+                    predictionsDiv.textContent = 'No objects detected.';
+                    document.getElementById('annotated-image').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing your request.');
+            }
+        });
+    </script>
+</body>
+</html>
